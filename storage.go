@@ -16,7 +16,7 @@ type Metadata struct {
 // Disk
 
 func init() {
-	if err := os.MkdirAll("cache", 0755); err != nil {
+	if err := os.MkdirAll(".cache", 0755); err != nil {
 		panic(err)
 	}
 }
