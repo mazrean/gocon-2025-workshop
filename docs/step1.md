@@ -14,12 +14,16 @@
 ここから、 `put` リクエストを処理する `PutHandler` 関数と、 `get` リクエストを処理する `GetHandler` 関数を実装します。
 アプリケーション起動時に `.cache` ディレクトリが初期化されるようになっている( `storage.go` 参照 )ので、ここにキャッシュを保存するように実装していきましょう。
 
+> [!WARNING]
+>`OutputID` や `ActionID` には `/` が含まれる場合があるため、ファイル名で使用する場合はエスケープする必要があります。
+>このサンプルコードでは、 `escapeString` 関数を用意しているので、これを使用してください。
+
 ### Step 1.1: `PutHandler` の実装
 `put` リクエストを処理する `PutHandler` 関数を実装します。
 
-1. `.cache` ディレクトリに `{{OutputID}}-d` という名前でファイルを作成し、キャッシュデータ(`Request.Body`) の内容を書き込む
+1. `.cache` ディレクトリに `fmt.Sprintf("%s-d", escapeString(req.OutputID))` という名前でファイルを作成し、キャッシュデータ(`Request.Body`) の内容を書き込む
 2. メタデータを json 形式にエンコード
-3. `.cache` ディレクトリに `{{ActionID}}-a.json` という名前でファイルを作成し、メタデータを書き込む
+3. `.cache` ディレクトリに `fmt.Sprintf("%s-a.json", escapeString(req.ActionID))` という名前でファイルを作成し、メタデータを書き込む
   - `Metadata` 構造体を使用する
   - 各フィールドの内容は以下の通り
     - `OutputID`: `Request.OutputID` と同じ値
@@ -30,18 +34,18 @@
   - `OutputID`: `Request.OutputID` と同じ値
   - `Size`: `Request.Size` と同じ値
   - `TimeNanos`: `Metadata.TimeNanos` と同じ値
-  - `DiskPath`: 書き込んだキャッシュデータのディスク上のパス(`.cache/{{OutputID}}-d`)
+  - `DiskPath`: 書き込んだキャッシュデータのディスク上のパス(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`)
   - その他のフィールドはゼロ値でよい
 
 ### Step 1.2: `GetHandler` の実装
 
-1. メタデータファイル(`.cache/{{OutputID}}-a.json`) ファイルを `os.Open` する
+1. メタデータファイル(`fmt.Sprintf(".cache/%s-a.json", escapeString(req.OutputID))`) ファイルを `os.Open` する
   - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
     - `ID`: `Request.ID` と同じ値
     - `Miss`: true
     - その他のフィールドはゼロ値でよい
 2. メタデータを json デコード
-3. キャッシュデータファイル(`.cache/{{OutputID}}-d`) を　`os.Stat` で存在確認する
+3. キャッシュデータファイル(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`) を　`os.Stat` で存在確認する
   - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
     - `ID`: `Request.ID` と同じ値
     - `Miss`: true
@@ -52,7 +56,7 @@
   - `OutputID`: `Metadata.OutputID` と同じ値
   - `Size`: `Metadata.Size` と同じ値
   - `TimeNanos`: `Metadata.TimeNanos` と同じ値
-  - `DiskPath`: キャッシュデータのディスク上のパス(`.cache/{{OutputID}}-d`)
+  - `DiskPath`: キャッシュデータのディスク上のパス(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`)
   - その他のフィールドはゼロ値でよい
 
 ### Step 1.3: 動作確認
