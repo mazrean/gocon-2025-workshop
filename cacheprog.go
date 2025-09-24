@@ -29,7 +29,7 @@ func CacheProg(stdin io.Reader, stdout io.Writer) error {
 // TODO: Step 2.1: PutHandlerでS3に保存するようにしよう
 func PutHandler(req *Request) (*Response, error) {
 	// 1. キャッシュデータファイルの作成と書き込み
-	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", req.OutputID))
+	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", escapeString(req.OutputID)))
 	dataFile, err := os.Create(dataFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cache data file: %w", err)
@@ -51,7 +51,7 @@ func PutHandler(req *Request) (*Response, error) {
 	}
 
 	// 3. メタデータファイルの作成と書き込み
-	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", req.ActionID))
+	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", escapeString(req.ActionID)))
 	metadataFile, err := os.Create(metadataFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create metadata file: %w", err)
@@ -80,7 +80,7 @@ func PutHandler(req *Request) (*Response, error) {
 // TODO: Step 2.2: GetHandlerでS3から取得するようにしよう
 func GetHandler(req *Request) (*Response, error) {
 	// 1. メタデータファイルを開く
-	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", req.ActionID))
+	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", escapeString(req.ActionID)))
 	metadataFile, err := os.Open(metadataFilePath)
 	if err != nil {
 		// ファイルが存在しない場合はキャッシュミス
@@ -102,7 +102,7 @@ func GetHandler(req *Request) (*Response, error) {
 	}
 
 	// 3. キャッシュデータファイルの存在確認
-	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", metadata.OutputID))
+	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", escapeString(metadata.OutputID)))
 	if _, err := os.Stat(dataFilePath); err != nil {
 		// ファイルが存在しない場合はキャッシュミス
 		if os.IsNotExist(err) {
