@@ -7,8 +7,11 @@ require (
 	golang.org/x/sync v0.17.0
 )
 
+require github.com/google/pprof v0.0.0-20240227163752-401108e1b7e7 // indirect
+
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/felixge/fgprof v0.9.5
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -24,3 +27,5 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
 )
+
+tool github.com/mazrean/gocon-2025-workshop/tools/s3-clean
