@@ -28,11 +28,11 @@ export S3_BUCKET_NAME=<バケット名>
 注意: Step1 で実装したローカルディスクへの保存の処理は残したままにしてください。レスポンスでは `DiskPath` フィールドにローカルディスク上のパスを返す必要があります。
 
 1. S3 のバケットにオブジェクトをアップロードする
-  - オブジェクト名は `{{OutputID}}-d` とする
+  - オブジェクト名は `fmt.Sprintf("%s-d", escapeString(Request.OutputID))` とする
   - `Request.Body` の内容をアップロードする
 2. メタデータを json 形式にエンコード
 3. S3 のバケットにメタデータをアップロードする
-  - オブジェクト名は `{{ActionID}}-a.json` とする
+  - オブジェクト名は `fmt.Sprintf("%s-a.json", escapeString(Request.ActionID))` とする
   - メタデータを書き込む
   - `Metadata` 構造体を使用する
   - 各フィールドの内容は以下の通り
@@ -54,7 +54,7 @@ export S3_BUCKET_NAME=<バケット名>
   - Step 1 時点では `Miss` フィールドが `true` のレスポンスを返している
   - S3 からもキャッシュデータが取得できなかった場合、 `Miss` フィールドが `true` のレスポンスを返す
   - `s3Client` の[`GetObject`](https://pkg.go.dev/github.com/minio/minio-go/v7#Client.GetObject) メソッドを使用する
-  - ダウンロード先は `.cache/{{OutputID}}-d` とする
+  - ダウンロード先は `fmt.Sprintf(".cache/%s-d", escapeString(Request.OutputID))` とする
 
 ### Step 2.3: 動作確認
 

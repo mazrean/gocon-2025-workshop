@@ -3,5 +3,6 @@ stdout.txt
 CLAUDE.md
 cacheprog
 metrics
+.env
 
 .cache/
