@@ -2,5 +2,6 @@ stdin.txt
 stdout.txt
 CLAUDE.md
 cacheprog
+metrics
 
 .cache/
