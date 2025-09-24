@@ -1,6 +1,6 @@
 # Step 1: リクエスト処理の実装
 
-`go` コマンドからのリクエストを受け取り、レスポンスを返す部分の実装を行います。
+`go` コマンドからのリクエストを受け取り、レスポンスを返す、最低限動作する GOCACHEPROG 実装を行います。
 実装例: [`step-1` ブランチ](https://github.com/mazrean/gocon-2025-workshop/tree/step-1)
 
 ## ゴール
@@ -35,12 +35,17 @@
 
 ### Step 1.2: `GetHandler` の実装
 
-1. メタデータファイル(`.cache/{{OutputID}}-a.json`) ファイルを Open する
+1. メタデータファイル(`.cache/{{OutputID}}-a.json`) ファイルを `os.Open` する
   - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
     - `ID`: `Request.ID` と同じ値
     - `Miss`: true
     - その他のフィールドはゼロ値でよい
 2. メタデータを json デコード
+3. キャッシュデータファイル(`.cache/{{OutputID}}-d`) を　`os.Stat` で存在確認する
+  - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
+    - `ID`: `Request.ID` と同じ値
+    - `Miss`: true
+    - その他のフィールドはゼロ値でよい
 3. レスポンスを返す
   - `ID`: `Request.ID` と同じ値
   - `Miss`: false
@@ -53,9 +58,7 @@
 ### Step 1.3: 動作確認
 
 1. GOCACHEPROG バックエンドをビルド(`go buiold -o ./cacheprog .`)
-2. 環境変数 `GOCACHEPROG` にビルドしたバイナリのパスを設定(`export GOCACHEPROG=$PWD/cacheprog`)
-  - 相対パスだと実行時ディレクトリに依存してしまうため、絶対パスでの設定推奨
-3. `go build std` で GOCACHEPROG バックエンドを使用して標準ライブラリをビルド
+2. `GOCACHEPROG=./cacheprog go build std` で GOCACHEPROG バックエンドを使用して標準ライブラリをビルド
   - Go の標準ライブラリのビルドを行っている
   - `CacheProg used.` と表示されれば GOCACHEPROG バックエンドが使用されている
 
