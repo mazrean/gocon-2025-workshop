@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -26,13 +28,103 @@ func CacheProg(stdin io.Reader, stdout io.Writer) error {
 // TODO: Step 1.1: PutHandlerを実装しよう
 // TODO: Step 2.1: PutHandlerでS3に保存するようにしよう
 func PutHandler(req *Request) (*Response, error) {
-	return nil, nil
+	// 1. キャッシュデータファイルの作成と書き込み
+	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", req.OutputID))
+	dataFile, err := os.Create(dataFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cache data file: %w", err)
+	}
+	defer dataFile.Close()
+
+	// キャッシュデータ(Request.Body)を書き込み
+	_, err = io.Copy(dataFile, req.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write cache data: %w", err)
+	}
+
+	// 2. メタデータの作成
+	currentTime := time.Now().UnixNano()
+	metadata := Metadata{
+		OutputID:  req.OutputID,
+		Size:      req.BodySize,
+		TimeNanos: currentTime,
+	}
+
+	// 3. メタデータファイルの作成と書き込み
+	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", req.ActionID))
+	metadataFile, err := os.Create(metadataFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metadata file: %w", err)
+	}
+	defer metadataFile.Close()
+
+	// メタデータをJSONエンコード
+	encoder := json.NewEncoder(metadataFile)
+	if err := encoder.Encode(metadata); err != nil {
+		return nil, fmt.Errorf("failed to encode metadata: %w", err)
+	}
+
+	// 4. レスポンスを返す
+	response := &Response{
+		ID:        req.ID,
+		OutputID:  req.OutputID,
+		Size:      req.BodySize,
+		TimeNanos: currentTime,
+		DiskPath:  dataFilePath,
+	}
+
+	return response, nil
 }
 
 // TODO: Step 1.2: GetHandlerを実装しよう
 // TODO: Step 2.2: GetHandlerでS3から取得するようにしよう
 func GetHandler(req *Request) (*Response, error) {
-	return nil, nil
+	// 1. メタデータファイルを開く
+	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", req.ActionID))
+	metadataFile, err := os.Open(metadataFilePath)
+	if err != nil {
+		// ファイルが存在しない場合はキャッシュミス
+		if os.IsNotExist(err) {
+			return &Response{
+				ID:   req.ID,
+				Miss: true,
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to open metadata file: %w", err)
+	}
+	defer metadataFile.Close()
+
+	// 2. メタデータをJSONデコード
+	var metadata Metadata
+	decoder := json.NewDecoder(metadataFile)
+	if err := decoder.Decode(&metadata); err != nil {
+		return nil, fmt.Errorf("failed to decode metadata: %w", err)
+	}
+
+	// 3. キャッシュデータファイルの存在確認
+	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", metadata.OutputID))
+	if _, err := os.Stat(dataFilePath); err != nil {
+		// ファイルが存在しない場合はキャッシュミス
+		if os.IsNotExist(err) {
+			return &Response{
+				ID:   req.ID,
+				Miss: true,
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to stat cache data file: %w", err)
+	}
+
+	// 4. キャッシュヒット時のレスポンスを返す
+	response := &Response{
+		ID:        req.ID,
+		Miss:      false,
+		OutputID:  metadata.OutputID,
+		Size:      metadata.Size,
+		TimeNanos: metadata.TimeNanos,
+		DiskPath:  dataFilePath,
+	}
+
+	return response, nil
 }
 
 // processRequest stdin からリクエストを読み込み、 handler の実行結果を stdout に書き込む。
