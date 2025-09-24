@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -86,7 +88,8 @@ DECODE_LOOP:
 			eg.Go(func() error {
 				res, err := getHandler(&req)
 				if err != nil {
-					return err
+					res = &Response{ID: req.ID, Err: err.Error()}
+					fmt.Fprintln(os.Stderr, "GetHandler error:", err)
 				}
 				if res == nil {
 					res = &Response{ID: req.ID, Err: "not implemented"}
@@ -99,7 +102,10 @@ DECODE_LOOP:
 				var body []byte
 				err := decoder.Decode(&body)
 				if err != nil {
-					return err
+					res := &Response{ID: req.ID, Err: fmt.Sprintf("failed to read body: %v", err)}
+					resChan <- res
+					fmt.Fprintln(os.Stderr, "Failed to read body:", err)
+					continue
 				}
 
 				req.Body = bytes.NewReader(body)
@@ -111,7 +117,10 @@ DECODE_LOOP:
 			eg.Go(func() error {
 				res, err := putHandler(&req)
 				if err != nil {
-					return err
+					res = &Response{ID: req.ID, Err: err.Error()}
+					fmt.Fprintln(os.Stderr, "PutHandler error:", err)
+					resChan <- res
+					return nil
 				}
 				if res == nil {
 					res = &Response{ID: req.ID, Err: "not implemented"}
