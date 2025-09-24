@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -11,6 +12,7 @@ const (
 )
 
 func main() {
+	fmt.Fprintln(os.Stderr, "CacheProg used.")
 	stdin, closeStdin, err := stdinReader()
 	if err != nil {
 		panic(err)

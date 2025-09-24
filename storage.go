@@ -8,8 +8,7 @@ import (
 )
 
 type Metadata struct {
-	ActionID  string `json:",omitempty"`
-	ObjectID  string `json:",omitempty"`
+	OutputID  string `json:",omitempty"`
 	Size      int64  `json:",omitempty"`
 	TimeNanos int64  `json:",omitempty"`
 }
