@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/minio/minio-go/v7"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -64,7 +66,35 @@ func PutHandler(req *Request) (*Response, error) {
 		return nil, fmt.Errorf("failed to encode metadata: %w", err)
 	}
 
-	// 4. レスポンスを返す
+	// 4. S3にオブジェクトを保存（S3クライアントが利用可能な場合のみ）
+	if s3Client != nil && bucketName != "" {
+		// キャッシュデータをS3にアップロード
+		_, err = dataFile.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, fmt.Errorf("failed to seek data file: %w", err)
+		}
+
+		objectName := fmt.Sprintf("%s-d", escapeString(req.OutputID))
+		_, err = s3Client.PutObject(context.Background(), bucketName, objectName, dataFile, req.BodySize, minio.PutObjectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload cache data to S3: %w", err)
+		}
+
+		// メタデータをS3にアップロード
+		metadataBytes, err := json.Marshal(metadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+
+		metadataObjectName := fmt.Sprintf("%s-a.json", escapeString(req.ActionID))
+		metadataReader := bytes.NewReader(metadataBytes)
+		_, err = s3Client.PutObject(context.Background(), bucketName, metadataObjectName, metadataReader, int64(len(metadataBytes)), minio.PutObjectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload metadata to S3: %w", err)
+		}
+	}
+
+	// 5. レスポンスを返す
 	response := &Response{
 		ID:        req.ID,
 		OutputID:  req.OutputID,
@@ -79,39 +109,91 @@ func PutHandler(req *Request) (*Response, error) {
 // TODO: Step 1.2: GetHandlerを実装しよう
 // TODO: Step 2.2: GetHandlerでS3から取得するようにしよう
 func GetHandler(req *Request) (*Response, error) {
-	// 1. メタデータファイルを開く
+	var metadata Metadata
+
+	// 1. ローカルメタデータファイルを開く
 	metadataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-a.json", escapeString(req.ActionID)))
 	metadataFile, err := os.Open(metadataFilePath)
 	if err != nil {
-		// ファイルが存在しない場合はキャッシュミス
 		if os.IsNotExist(err) {
-			return &Response{
-				ID:   req.ID,
-				Miss: true,
-			}, nil
+			// ローカルにメタデータが存在しない場合、S3から取得を試行
+			if s3Client != nil && bucketName != "" {
+				metadataObjectName := fmt.Sprintf("%s-a.json", escapeString(req.ActionID))
+				s3Object, err := s3Client.GetObject(context.Background(), bucketName, metadataObjectName, minio.GetObjectOptions{})
+				if err != nil {
+					// S3からも取得できない場合はキャッシュミス
+					return &Response{
+						ID:   req.ID,
+						Miss: true,
+					}, nil
+				}
+
+				// S3からメタデータを取得してデコード
+				decoder := json.NewDecoder(s3Object)
+				if err := decoder.Decode(&metadata); err != nil {
+					s3Object.Close()
+					return nil, fmt.Errorf("failed to decode S3 metadata: %w", err)
+				}
+				s3Object.Close()
+			} else {
+				// S3クライアントが利用できない場合はキャッシュミス
+				return &Response{
+					ID:   req.ID,
+					Miss: true,
+				}, nil
+			}
+		} else {
+			return nil, fmt.Errorf("failed to open metadata file: %w", err)
 		}
-		return nil, fmt.Errorf("failed to open metadata file: %w", err)
+	} else {
+		// ローカルメタデータからデコード
+		decoder := json.NewDecoder(metadataFile)
+		if err := decoder.Decode(&metadata); err != nil {
+			metadataFile.Close()
+			return nil, fmt.Errorf("failed to decode metadata: %w", err)
+		}
+		metadataFile.Close()
 	}
-	defer metadataFile.Close()
 
-	// 2. メタデータをJSONデコード
-	var metadata Metadata
-	decoder := json.NewDecoder(metadataFile)
-	if err := decoder.Decode(&metadata); err != nil {
-		return nil, fmt.Errorf("failed to decode metadata: %w", err)
-	}
-
-	// 3. キャッシュデータファイルの存在確認
+	// 2. キャッシュデータファイルの存在確認
 	dataFilePath := filepath.Join(".cache", fmt.Sprintf("%s-d", escapeString(metadata.OutputID)))
 	if _, err := os.Stat(dataFilePath); err != nil {
-		// ファイルが存在しない場合はキャッシュミス
 		if os.IsNotExist(err) {
-			return &Response{
-				ID:   req.ID,
-				Miss: true,
-			}, nil
+			// ローカルにキャッシュデータが存在しない場合、S3からダウンロード
+			if s3Client != nil && bucketName != "" {
+				dataObjectName := fmt.Sprintf("%s-d", escapeString(metadata.OutputID))
+				s3Object, err := s3Client.GetObject(context.Background(), bucketName, dataObjectName, minio.GetObjectOptions{})
+				if err != nil {
+					// S3からも取得できない場合はキャッシュミス
+					return &Response{
+						ID:   req.ID,
+						Miss: true,
+					}, nil
+				}
+
+				// S3からキャッシュデータをローカルにダウンロード
+				dataFile, err := os.Create(dataFilePath)
+				if err != nil {
+					s3Object.Close()
+					return nil, fmt.Errorf("failed to create local cache data file: %w", err)
+				}
+
+				_, err = io.Copy(dataFile, s3Object)
+				dataFile.Close()
+				s3Object.Close()
+				if err != nil {
+					return nil, fmt.Errorf("failed to download cache data from S3: %w", err)
+				}
+			} else {
+				// S3クライアントが利用できない場合はキャッシュミス
+				return &Response{
+					ID:   req.ID,
+					Miss: true,
+				}, nil
+			}
+		} else {
+			return nil, fmt.Errorf("failed to stat cache data file: %w", err)
 		}
-		return nil, fmt.Errorf("failed to stat cache data file: %w", err)
 	}
 
 	// 4. キャッシュヒット時のレスポンスを返す
