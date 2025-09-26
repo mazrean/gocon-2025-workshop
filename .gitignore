@@ -4,5 +4,7 @@ CLAUDE.md
 cacheprog
 metrics
 .env
+*.csv
+request.txt
 
 .cache/
