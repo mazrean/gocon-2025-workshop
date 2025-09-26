@@ -127,13 +127,19 @@ func GetHandler(req *Request) (*Response, error) {
 		}
 
 		metadataObjectName := fmt.Sprintf("%s-a.json", escapeString(req.ActionID))
-		s3Object, err := s3Client.GetObject(context.Background(), bucketName, metadataObjectName, minio.GetObjectOptions{})
+		_, err := s3Client.StatObject(context.Background(), bucketName, metadataObjectName, minio.StatObjectOptions{})
 		if err != nil {
-			// S3からも取得できない場合はキャッシュミス
+			// S3にオブジェクトが存在しない場合はキャッシュミス
 			return &Response{
 				ID:   req.ID,
 				Miss: true,
 			}, nil
+		}
+
+		s3Object, err := s3Client.GetObject(context.Background(), bucketName, metadataObjectName, minio.GetObjectOptions{})
+		if err != nil {
+			// S3からも取得できない場合はキャッシュミス
+			return nil, fmt.Errorf("failed to get metadata from S3: %w", err)
 		}
 		defer s3Object.Close()
 
