@@ -1,8 +1,10 @@
 stdin.txt
 stdout.txt
+request.txt
 CLAUDE.md
 cacheprog
 metrics
 .env
+*.csv
 
 .cache/

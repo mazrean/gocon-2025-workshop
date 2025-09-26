@@ -1,4 +1,4 @@
-# Step 1: リクエスト処理の実装
+# Step 1: ディスクの利用
 
 `go` コマンドからのリクエストを受け取り、レスポンスを返す、最低限動作する GOCACHEPROG 実装を行います。
 実装例: [`step-1` ブランチ](https://github.com/mazrean/gocon-2025-workshop/tree/step-1)

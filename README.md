@@ -10,7 +10,7 @@
 
 GOCACHEPROG の概要と、ワークショップの全体の流れを説明します。
 
-### Step 1: リクエスト処理の実装
+### Step 1: ディスクの利用
 目安時間: 30 分 (15:00-15:30)
 手順: [./docs/step1.md](./docs/step1.md)
 実装例: [`step-1` ブランチ](https://github.com/mazrean/gocon-2025-workshop/tree/step-1)
@@ -18,7 +18,7 @@ GOCACHEPROG の概要と、ワークショップの全体の流れを説明し�
 このステップでは、 `go` コマンドからのリクエストの処理を実装します。
 これを通して `go` コマンドと GOCACHEPROG バックエンドの間でやり取りされるリクエストとレスポンスの形式を理解します。
 
-### Step 2: オブジェクトストレージへの保存の実装
+### Step 2: S3互換ストレージの利用
 目安時間: 30 分 (15:30-16:00)
 手順: [./docs/step2.md](./docs/step2.md)
 実装例: [`step-2` ブランチ](https://github.com/mazrean/gocon-2025-workshop/tree/step-2)

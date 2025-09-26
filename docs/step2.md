@@ -8,7 +8,8 @@ S3 互換オブジェクトストレージにキャッシュを保存する GOCA
 
 ## 準備
 
-環境変数の設定をします。
+S3の認証情報を環境変数で設定します。
+参加者の方は、スプレッドシートの「S3認証情報」のシートを参照してください。
 ```bash
 export S3_ENDPOINT=<エンドポイントのホスト名>
 export S3_ACCESS_KEY_ID=<アクセスキーID>
@@ -29,19 +30,6 @@ export S3_BUCKET_NAME=<バケット名>
 注意: Step1 で実装したローカルディスクへの保存の処理は残したままにしてください。レスポンスでは `DiskPath` フィールドにローカルディスク上のパスを返す必要があります。
 
 1. S3 のバケットにオブジェクトをアップロードする
-<<<<<<< Updated upstream
-  - オブジェクト名は `fmt.Sprintf("%s-d", escapeString(Request.OutputID))` とする
-  - `Request.Body` の内容をアップロードする
-2. メタデータを json 形式にエンコード
-3. S3 のバケットにメタデータをアップロードする
-  - オブジェクト名は `fmt.Sprintf("%s-a.json", escapeString(Request.ActionID))` とする
-  - メタデータを書き込む
-  - `Metadata` 構造体を使用する
-  - 各フィールドの内容は以下の通り
-    - `OutputID`: `Request.OutputID` と同じ値
-    - `Size`: `Request.Size` と同じ値
-    - `TimeNanos`: 現在の Unix ナノ時間( `time.Now().UnixNano()` )
-=======
     - オブジェクト名は `fmt.Sprintf("%s-d", escapeString(Request.OutputID))` とする
     - `Request.Body` の内容をアップロードする
 2. メタデータを json 形式にエンコード
@@ -53,7 +41,6 @@ export S3_BUCKET_NAME=<バケット名>
         - `OutputID`: `Request.OutputID` と同じ値
         - `Size`: `Request.Size` と同じ値
         - `TimeNanos`: 現在の Unix ナノ時間( `time.Now().UnixNano()` )
->>>>>>> Stashed changes
 
 ### Step 2.2: `GetHandler` の実装
 `get` リクエストを処理する `GetHandler` 関数に以下の処理を**追加**する。
@@ -66,17 +53,10 @@ export S3_BUCKET_NAME=<バケット名>
     - S3 からもメタデータが取得できなかった場合、 `Miss` フィールドが `true` のレスポンスを返す
     - `s3Client` の[`GetObject`](https://pkg.go.dev/github.com/minio/minio-go/v7#Client.GetObject) メソッドを使用する
 2. ローカルにキャッシュデータファイルが存在しない場合、 S3 からキャッシュデータをローカルにダウンロードするように書き換える
-<<<<<<< Updated upstream
-  - Step 1 時点では `Miss` フィールドが `true` のレスポンスを返している
-  - S3 からもキャッシュデータが取得できなかった場合、 `Miss` フィールドが `true` のレスポンスを返す
-  - `s3Client` の[`GetObject`](https://pkg.go.dev/github.com/minio/minio-go/v7#Client.GetObject) メソッドを使用する
-  - ダウンロード先は `fmt.Sprintf(".cache/%s-d", escapeString(Request.OutputID))` とする
-=======
     - Step 1 時点では `Miss` フィールドが `true` のレスポンスを返している
     - S3 からもキャッシュデータが取得できなかった場合、 `Miss` フィールドが `true` のレスポンスを返す
     - `s3Client` の[`GetObject`](https://pkg.go.dev/github.com/minio/minio-go/v7#Client.GetObject) メソッドを使用する
     - ダウンロード先は `fmt.Sprintf(".cache/%s-d", escapeString(Request.OutputID))` とする
->>>>>>> Stashed changes
 
 ### Step 2.3: 動作確認
 
