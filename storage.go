@@ -62,7 +62,7 @@ func init() {
 	var err error
 	s3Client, err = minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, session),
-		Secure: false,
+		Secure: true,
 	})
 	if err != nil {
 		panic(err)

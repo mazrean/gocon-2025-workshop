@@ -24,47 +24,47 @@
 1. `.cache` ディレクトリに `fmt.Sprintf("%s-d", escapeString(req.OutputID))` という名前でファイルを作成し、キャッシュデータ(`Request.Body`) の内容を書き込む
 2. メタデータを json 形式にエンコード
 3. `.cache` ディレクトリに `fmt.Sprintf("%s-a.json", escapeString(req.ActionID))` という名前でファイルを作成し、メタデータを書き込む
-  - `Metadata` 構造体を使用する
-  - 各フィールドの内容は以下の通り
+    - `Metadata` 構造体を使用する
+    - 各フィールドの内容は以下の通り
+        - `OutputID`: `Request.OutputID` と同じ値
+        - `Size`: `Request.Size` と同じ値
+        - `TimeNanos`: 現在の Unix ナノ時間( `time.Now().UnixNano()` )
+4. `Response` を返す
+    - `ID`: `Request.ID` と同じ値
     - `OutputID`: `Request.OutputID` と同じ値
     - `Size`: `Request.Size` と同じ値
-    - `TimeNanos`: 現在の Unix ナノ時間( `time.Now().UnixNano()` )
-4. `Response` を返す
-  - `ID`: `Request.ID` と同じ値
-  - `OutputID`: `Request.OutputID` と同じ値
-  - `Size`: `Request.Size` と同じ値
-  - `TimeNanos`: `Metadata.TimeNanos` と同じ値
-  - `DiskPath`: 書き込んだキャッシュデータのディスク上のパス(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`)
-  - その他のフィールドはゼロ値でよい
+    - `TimeNanos`: `Metadata.TimeNanos` と同じ値
+    - `DiskPath`: 書き込んだキャッシュデータのディスク上のパス(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`)
+    - その他のフィールドはゼロ値でよい
 
 ### Step 1.2: `GetHandler` の実装
 
 1. メタデータファイル(`fmt.Sprintf(".cache/%s-a.json", escapeString(req.OutputID))`) ファイルを `os.Open` する
-  - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
-    - `ID`: `Request.ID` と同じ値
-    - `Miss`: true
-    - その他のフィールドはゼロ値でよい
+    - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
+        - `ID`: `Request.ID` と同じ値
+        - `Miss`: true
+        - その他のフィールドはゼロ値でよい
 2. メタデータを json デコード
 3. キャッシュデータファイル(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`) を　`os.Stat` で存在確認する
-  - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
-    - `ID`: `Request.ID` と同じ値
-    - `Miss`: true
-    - その他のフィールドはゼロ値でよい
+    - 存在しない場合、 `Miss` フィールドが `true` の `Response` を返す
+        - `ID`: `Request.ID` と同じ値
+        - `Miss`: true
+        - その他のフィールドはゼロ値でよい
 3. レスポンスを返す
-  - `ID`: `Request.ID` と同じ値
-  - `Miss`: false
-  - `OutputID`: `Metadata.OutputID` と同じ値
-  - `Size`: `Metadata.Size` と同じ値
-  - `TimeNanos`: `Metadata.TimeNanos` と同じ値
-  - `DiskPath`: キャッシュデータのディスク上のパス(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`)
-  - その他のフィールドはゼロ値でよい
+    - `ID`: `Request.ID` と同じ値
+    - `Miss`: false
+    - `OutputID`: `Metadata.OutputID` と同じ値
+    - `Size`: `Metadata.Size` と同じ値
+    - `TimeNanos`: `Metadata.TimeNanos` と同じ値
+    - `DiskPath`: キャッシュデータのディスク上のパス(`fmt.Sprintf(".cache/%s-d", escapeString(req.OutputID))`)
+    - その他のフィールドはゼロ値でよい
 
 ### Step 1.3: 動作確認
 
 1. GOCACHEPROG バックエンドをビルド(`go buiold -o ./cacheprog .`)
 2. `GOCACHEPROG=./cacheprog go build std` で GOCACHEPROG バックエンドを使用して標準ライブラリをビルド
-  - Go の標準ライブラリのビルドを行っている
-  - `CacheProg used.` と表示されれば GOCACHEPROG バックエンドが使用されている
+    - Go の標準ライブラリのビルドを行っている
+    - `CacheProg used.` と表示されれば GOCACHEPROG バックエンドが使用されている
 
 ### Step 1.4: (発展1) リクエスト・レスポンスを見てみよう
 

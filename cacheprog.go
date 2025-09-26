@@ -46,6 +46,12 @@ func processRequest(
 
 	resChan := make(chan *Response, 100)
 
+	logFile, err := os.Create("request.txt")
+	if err != nil {
+		return fmt.Errorf("failed to create log file: %w", err)
+	}
+	defer logFile.Close()
+
 	// レスポンス書き込み用 Goroutine
 	eg.Go(func() error {
 		bw := bufio.NewWriter(stdout)
@@ -62,6 +68,8 @@ func processRequest(
 			if err := bw.Flush(); err != nil {
 				return err
 			}
+
+			fmt.Fprintf(logFile, "<- %+v\n", res)
 		}
 		return nil
 	})
@@ -80,6 +88,8 @@ DECODE_LOOP:
 		} else if err != nil {
 			return err
 		}
+
+		fmt.Fprintf(logFile, "-> %+v\n", req)
 
 		// コマンド別に処理
 		switch req.Command {
